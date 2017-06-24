@@ -18,7 +18,6 @@
  * File structure:
  *  |------------------- CMakeLists.txt
  *  |------------------- PiCameraTweet.sh
- *  |------------------- README.md
  *  |--[ build ]-------- tweetPic.py
  *  |                |-- PiCameraTweet (once compiled)
  *  |                \-- [ images ]
@@ -33,6 +32,8 @@
  *  cmake ..
  *  make
  *  ./PiCameraTweet
+ *  ./PiCameraTweet -h  (Shows usage)
+ *  ./PiCameraTweet -y  (Skips interactive mode, used to send tweet w/o asking)
  * 
  * Raspicam/OpenCV Compile Reference (lmmal might not work):
  *  g++ file.cpp -o file -I/usr/local/include/ -lraspicam -lraspicam_cv \
@@ -58,8 +59,26 @@ const unsigned short int framesCount = 20;
 using namespace std;
 using namespace cv;
 
-int main( int argc, char **argv ) {  
-  
+int main( int argc, char *argv[] ) {  
+
+	//
+	// Check parameters
+	//
+	bool interactive = true; 
+	if( argc == 2 ) {
+		string argument = argv[1];
+		if( argument == "-h" ) {
+			cout << endl << " Usage: " << argv[0] << " [ -h | -y ] " << endl;
+			cout << "        '-y' avoids interactive mode... " << endl << endl;
+			return 0;
+		}
+		if( argument == "-y" ) {
+			cout << endl << " Interactive mode is disabled, answer to tweet image is always 'yes'... " << endl << endl;
+			interactive = false;
+		}
+	}
+	// cout << " argc:" << argc << " argv[0]:" << argv[0] << " argv[1]:" << argv[1] << endl << endl;
+	
 	//
 	// Initialize timer and libraries variables
 	//   
@@ -80,9 +99,9 @@ int main( int argc, char **argv ) {
 	// Clear the screen and print header
 	//
 	ClearScreen();
-	cout << endl << "========================================================================" << endl;
-	cout <<         " PiCameraTweet: Send a picture to a twitter account from Raspberry Pi3! ";
-	cout << endl << "========================================================================" << endl << endl;
+	cout << endl << "=========================================================================" << endl;
+	cout <<         " PiCameraTweet : Send a picture to a twitter account from Raspberry Pi3! ";
+	cout << endl << "=========================================================================" << endl << endl;
 
     //
     // Open camera
@@ -130,7 +149,7 @@ int main( int argc, char **argv ) {
 			( float ) ( ( float )( framesCount ) / secondsElapsed ) << endl;
     
     //
-    // Save and display image
+    // Save display
     //
     cv::imwrite( fileName, image );
     cout << " Color Image saved at: ../" << fileName << endl << endl;
@@ -139,44 +158,53 @@ int main( int argc, char **argv ) {
 		cout << " Could not open or find the image! " << endl ;
 		return -1;
 	}
-	namedWindow( "Display window", WINDOW_NORMAL );	// Create a window
-								// WINDOW_KEEPRATIO
-								// WINDOW_AUTOSIZE
-	moveWindow( "Display window", 840, 48);
-	imshow( "Display window", image );		// Show image inside it
-	cout << " Check if you like the picture, then press any key... " << endl << endl;
 	
-	cvWaitKey(0);	// Wait for a keystroke in the window
+	//
+	// If interactive mode is disabled, skip to tweet image...
+	//	
+	if( interactive == true ) {
+		//
+		// Display image
+		//
+		namedWindow( "Display window", WINDOW_NORMAL );	// Create a window
+									// WINDOW_KEEPRATIO
+									// WINDOW_AUTOSIZE
+		moveWindow( "Display window", 840, 48);
+		imshow( "Display window", image );		// Show image inside it
+		cout << " Check if you like the picture, then press any key... " << endl << endl;
 	
-	image.release();
-	cvDestroyAllWindows();	// cvDestroyWindow( "Display window" );
-	//delete[] &image;	// Segmentation fault if used alone;
-						// Double free or corruption error when used
-						// with image.release or cvDestroy...
-    
-	//
-	// Ask user to accept photo for twitter
-	//
-	string input = "";
-	char inputChar = {0};
-	while ( true ) {
-		cout << "   Enter 'y' to tweet photo (or another key to cancel): ";
-		getline(cin, input);
-		if( input.length() == 1 ) {
-			inputChar = toupper( input[0] );
-			// inputChar = putchar( toupper( input[0] ) );
-			break;
+		cvWaitKey(0);	// Wait for a keystroke in the window
+	
+		image.release();
+		cvDestroyAllWindows();	// cvDestroyWindow( "Display window" );
+		//delete[] &image;	// Segmentation fault if used alone;
+							// Double free or corruption error when used
+							// with image.release or cvDestroy...
+		
+		//
+		// Ask user to accept photo for twitter
+		//
+		string input = "";
+		char inputChar = {0};
+		while ( true ) {
+			cout << "   Enter 'y' to tweet photo (or another key to cancel): ";
+			getline(cin, input);
+			if( input.length() == 1 ) {
+				inputChar = toupper( input[0] );
+				// inputChar = putchar( toupper( input[0] ) );
+				break;
+			}
+			cout << "   Invalid character, please try again " << endl;
 		}
-		cout << "   Invalid character, please try again " << endl;
-	}
-		// cout << " You entered: " << inputChar << endl << endl;
-	if( inputChar == 'Y' ) {
-		cout << endl;
-	}
-	else {
-		cout << endl << " OK, re-run the program to try another shot! " << endl << endl;
-		return 0;
-	}
+			// cout << " You entered: " << inputChar << endl << endl;
+		if( inputChar == 'Y' ) {
+			cout << endl;
+		}
+		else {
+			cout << endl << " OK, re-run the program to try another shot! " << endl << endl;
+			return 0;
+		}
+	}	
 	
     //
     // Call tweetPic.py Python script to tweet image 
